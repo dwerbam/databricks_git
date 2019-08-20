@@ -1,0 +1,116 @@
+#!/bin/bash
+set -e
+# set -x
+
+
+usage() { 
+  echo "
+  Syntax: $0 [-p <profile>[=DEFAULT]] <push|pull> [-o] 
+  Syntax: $0 [-p <profile>[=DEFAULT]] <pushfile|pullfile> <filename> [-o] 
+
+  Where 'profile' is one of the configurations in ~/.databrickscfg
+  " 1>&2
+  exit 1; 
+}
+
+# -------------------------------------- parse parameters ----------
+PROFILE="DEFAULT"
+while getopts ":p:" options; do
+    case "${options}" in
+        p)
+            PROFILE=${OPTARG}
+            [ -n "$PROFILE" ] || usage
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+ACTION=$1
+[[ $ACTION =~ ^(push|pull|pushfile|pullfile)$ ]] || usage
+shift
+
+if [[ $ACTION =~ ^(pushfile|pullfile)$ ]]; then
+  FILENAME=$1
+  [ -n "$FILENAME" ] || usage
+  shift
+fi
+
+PARAMS=$*   # gets remaining params
+echo "Params:
+  PROFILE: $PROFILE
+  ACTION: $ACTION
+  FILENAME: $FILENAME
+  PARAMS: $PARAMS
+"
+# ---------------------------------------------------------------------
+find-up () {
+  path=$(pwd)
+  while [[ "$path" != "" && ! -e "$path/$1" ]]; do
+    path=${path%/*}
+  done
+  echo "$path"
+}
+
+PWD=$(pwd)
+BASE=$(find-up ".databricks_$PROFILE")
+RELFOLDER=${PWD#$BASE}
+
+[ -n "$BASE" ] && DBBASE=$(cat "$BASE/.databricks_$PROFILE")
+if [ -z "$BASE" ] || [ -z "$DBBASE" ]; then
+  echo "Databricks folder not specified. Create a hidden file indicating the location in the workspace. e.g.:"
+  echo "echo \"/Release/JoinData\" > .databricks_$PROFILE"
+  exit 1
+fi
+
+# any additional parameters from the command line will be passed to the databricks command
+
+if [ "$ACTION" == "pull" ]; then
+  STASHNEEDED=$(git status --porcelain)
+  if [[ $STASHNEEDED ]]; then
+    echo "$STASHNEEDED"
+    echo "Local changes found! Please commit or stash the files first to avoid losing data."
+    exit 1
+  fi
+  databricks --profile "$PROFILE" workspace export_dir -o $PARAMS "$DBBASE$RELFOLDER" "$BASE$RELFOLDER"
+  exit $?
+fi
+
+if [ "$ACTION" == "push" ]; then
+  databricks --profile "$PROFILE" workspace import_dir $PARAMS -e "$BASE$RELFOLDER" "$DBBASE$RELFOLDER"
+  exit $?
+fi
+
+# ------------------------ starts preparing the filename ------------
+FILEONLY="${FILENAME%.*}"
+
+if [ "$ACTION" == "pullfile" ]; then
+  databricks --profile "$PROFILE" workspace export "$DBBASE$RELFOLDER/$FILEONLY" "$BASE$RELFOLDER/$FILENAME" $PARAMS
+  exit $?
+fi
+
+case "$FILENAME" in
+*.py)
+  language="PYTHON"
+  ;;
+*.scala)
+  language="SCALA"
+  ;;
+*.r|*.R)
+  language="R"
+  ;;
+*.sql)
+  language="SQL"
+  ;;
+*)
+  language="unknown"
+  ;;
+esac
+
+if [ "$ACTION" == "pushfile" ]; then
+  databricks --profile "$PROFILE" workspace import -l "$language" "$BASE$RELFOLDER/$FILENAME" "$DBBASE$RELFOLDER/$FILEONLY" $PARAMS
+  exit $?
+fi
+
