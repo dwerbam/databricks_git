@@ -5,6 +5,7 @@ set -e
 
 usage() { 
   echo "
+  Syntax: $0 [-p <profile>[=DEFAULT]] init <databricks_folder>
   Syntax: $0 [-p <profile>[=DEFAULT]] <push|pull> [-o] 
   Syntax: $0 [-p <profile>[=DEFAULT]] <pushfile|pullfile> <filename> [-o] 
 
@@ -29,8 +30,25 @@ done
 shift $((OPTIND-1))
 
 ACTION=$1
-[[ $ACTION =~ ^(push|pull|pushfile|pullfile)$ ]] || usage
+[[ $ACTION =~ ^(init|push|pull|pushfile|pullfile)$ ]] || usage
 shift
+
+if [[ $ACTION =~ ^(init)$ ]]; then
+  DB_FOLDER=$1
+  [ -n "$DB_FOLDER" ] || usage
+  shift
+
+  echo "Params:
+  PROFILE: $PROFILE
+  ACTION: $ACTION
+  DB FOLDER: $DB_FOLDER
+  "
+  git init
+  echo "$DB_FOLDER" > ".databricks_$PROFILE"
+  git add ".databricks_$PROFILE"
+  git commit -m "initial commit"
+  exit 0
+fi
 
 if [[ $ACTION =~ ^(pushfile|pullfile)$ ]]; then
   FILENAME=$1
@@ -45,6 +63,7 @@ echo "Params:
   FILENAME: $FILENAME
   PARAMS: $PARAMS
 "
+
 # ---------------------------------------------------------------------
 find-up () {
   path=$(pwd)
