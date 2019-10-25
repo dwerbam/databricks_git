@@ -2,7 +2,6 @@
 set -e
 # set -x
 
-
 usage() { 
   echo "
   Syntax: $0 [-p <profile>[=DEFAULT]] init <databricks_folder>
@@ -78,6 +77,10 @@ find-up () {
 PWD=$(pwd)
 BASE=$(find-up ".databricks_$PROFILE")
 RELFOLDER=${PWD#$BASE}
+
+if [[ "$OSTYPE" == "msys" ]]; then
+	BASE=${BASE/\/c/c:}
+fi
 
 [ -n "$BASE" ] && DBBASE=$(cat "$BASE/.databricks_$PROFILE")
 if [ -z "$BASE" ] || [ -z "$DBBASE" ]; then
