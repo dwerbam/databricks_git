@@ -14,6 +14,8 @@ usage() {
   exit 1; 
 }
 
+export MSYS_NO_PATHCONV=1 # to avoid windows git bash path convertion
+
 # -------------------------------------- parse parameters ----------
 PROFILE="DEFAULT"
 while getopts ":p:" options; do
