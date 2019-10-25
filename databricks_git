@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
-# set -x
+#set -x
 
+#databricks --profile DEFAULT workspace export_dir -o /Release /c/Users/dwerbam/Release ----> /c/Users/dwerbam/Release\dirag_R_utils.r
+#databricks --profile DEFAULT workspace export_dir -o /Release c:/Users/dwerbam/Release ----> c:/Users/dwerbam/Release\dirag_R_utils.r
 
 usage() { 
   echo "
@@ -78,6 +80,10 @@ find-up () {
 PWD=$(pwd)
 BASE=$(find-up ".databricks_$PROFILE")
 RELFOLDER=${PWD#$BASE}
+
+if [[ "$OSTYPE" == "msys" ]]; then
+	BASE=${BASE/\/c/c:}
+fi
 
 [ -n "$BASE" ] && DBBASE=$(cat "$BASE/.databricks_$PROFILE")
 if [ -z "$BASE" ] || [ -z "$DBBASE" ]; then
