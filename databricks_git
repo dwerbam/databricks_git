@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
-#set -x
-
-#databricks --profile DEFAULT workspace export_dir -o /Release /c/Users/dwerbam/Release ----> /c/Users/dwerbam/Release\dirag_R_utils.r
-#databricks --profile DEFAULT workspace export_dir -o /Release c:/Users/dwerbam/Release ----> c:/Users/dwerbam/Release\dirag_R_utils.r
+# set -x
 
 usage() { 
   echo "
